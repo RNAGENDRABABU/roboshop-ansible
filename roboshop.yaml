@@ -18,7 +18,7 @@
       instance_type: "t3.micro"
       security_group: "{{ sg_id }}"
       image_id: "{{ ami_id }}"
-      name: "{{ item }}"
+      name: "{{ item }}-{{ env }}"
       tags:
         project: roboshop 
         Component: "{{ item }}"
@@ -42,6 +42,7 @@
       ttl: 1
       value: "{{ item.instances[0].private_ip_address }}"
       wait: true
+      overwrite: true
     loop: "{{ ec2_output.results }}" # list 
     when: action == "create"
 
@@ -54,6 +55,7 @@
       ttl: 1
       value: "{{ item.instances[0].public_ip_address }}"
       wait: true
+      overwrite: true
     loop: "{{ ec2_output.results }}"
     when: # and
     - item.item == "frontend"
@@ -67,6 +69,14 @@
       type: A 
       ttl: 1
     loop: "{{ instances }}"
+    when: action == "destroy"     
+
+  - name: delete frontend public record
+    amazon.aws.route53:
+      state: absent
+      zone: "{{ domain_name }}"
+      record: "roboshop-{{ env }}.{{ domain_name }}"
+      type: A
     when: action == "destroy" 
 
   - name: delete ec2 instance
@@ -75,4 +85,5 @@
       name: "{{ item }}-{{ env }}"
       wait: false 
     loop: "{{ instances }}"
-    when: action == "destroy"     
+    when: action == "destroy"        
+
